@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertClip, InsertDailyUsage, InsertUserPreferences, InsertUserTier, clips, dailyUsage, userPreferences, userTiers, InsertUser, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,133 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+/**
+ * Get or create user tier
+ */
+export async function getUserTier(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(userTiers).where(eq(userTiers.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+/**
+ * Create user tier (called when user signs up)
+ */
+export async function createUserTier(userId: number, tier: "lite" | "pro" = "lite") {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db.insert(userTiers).values({
+    userId,
+    tier,
+  });
+
+  return getUserTier(userId);
+}
+
+/**
+ * Update user tier
+ */
+export async function updateUserTier(userId: number, tier: "lite" | "pro") {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db.update(userTiers).set({ tier }).where(eq(userTiers.userId, userId));
+  return getUserTier(userId);
+}
+
+/**
+ * Save generated clip
+ */
+export async function saveClip(clip: InsertClip) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.insert(clips).values(clip);
+  return result;
+}
+
+/**
+ * Get user's clips
+ */
+export async function getUserClips(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(clips).where(eq(clips.userId, userId)).orderBy(desc(clips.createdAt));
+}
+
+/**
+ * Get daily usage for user
+ */
+export async function getDailyUsage(userId: number, date: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db
+    .select()
+    .from(dailyUsage)
+    .where(and(eq(dailyUsage.userId, userId), eq(dailyUsage.date, date)))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : null;
+}
+
+/**
+ * Increment daily usage
+ */
+export async function incrementDailyUsage(userId: number, date: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const existing = await getDailyUsage(userId, date);
+
+  if (existing) {
+    await db
+      .update(dailyUsage)
+      .set({ clipsGenerated: existing.clipsGenerated + 1 })
+      .where(and(eq(dailyUsage.userId, userId), eq(dailyUsage.date, date)));
+  } else {
+    await db.insert(dailyUsage).values({
+      userId,
+      date,
+      clipsGenerated: 1,
+    });
+  }
+
+  return getDailyUsage(userId, date);
+}
+
+/**
+ * Get user preferences
+ */
+export async function getUserPreferences(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+/**
+ * Create or update user preferences
+ */
+export async function upsertUserPreferences(userId: number, prefs: Partial<InsertUserPreferences>) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const existing = await getUserPreferences(userId);
+
+  if (existing) {
+    await db.update(userPreferences).set(prefs).where(eq(userPreferences.userId, userId));
+  } else {
+    await db.insert(userPreferences).values({
+      userId,
+      ...prefs,
+    });
+  }
+
+  return getUserPreferences(userId);
+}

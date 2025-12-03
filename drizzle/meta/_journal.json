@@ -1,5 +1,20 @@
 {
   "version": "7",
   "dialect": "mysql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1764728754186,
+      "tag": "0000_robust_black_panther",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1764728819144,
+      "tag": "0001_groovy_scalphunter",
+      "breakpoints": true
+    }
+  ]
 }
