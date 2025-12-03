@@ -54,7 +54,17 @@ export default function ClipPreview() {
   };
 
   const handleDownload = () => {
-    toast.info("Download feature coming soon!");
+    if (latestClip.clipUrl) {
+      const link = document.createElement("a");
+      link.href = latestClip.clipUrl;
+      link.download = `${latestClip.clipTitle}.mp4`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Download started!");
+    } else {
+      toast.error("Video is still being processed. Please try again in a moment.");
+    }
   };
 
   return (
@@ -73,21 +83,27 @@ export default function ClipPreview() {
       {/* Main Content */}
       <div className="container py-12">
         <div className="max-w-4xl mx-auto">
-          {/* Video Preview */}
-          <Card className="mb-8 overflow-hidden">
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 aspect-video flex items-center justify-center relative">
-              <div className="absolute inset-0 bg-black/40" />
-              <div className="relative z-10 text-center">
-                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <div className="w-0 h-0 border-l-8 border-l-transparent border-r-0 border-t-5 border-t-transparent border-b-5 border-b-transparent ml-1" />
+              {/* Video Preview */}
+              <Card className="mb-8 overflow-hidden">
+                {latestClip.clipUrl ? (
+                  <video
+                    src={latestClip.clipUrl}
+                    controls
+                    className="w-full aspect-video bg-black"
+                  />
+                ) : (
+                  <div className="bg-gradient-to-br from-slate-900 to-slate-800 aspect-video flex items-center justify-center relative">
+                    <div className="absolute inset-0 bg-black/40" />
+                    <div className="relative z-10 text-center">
+                      <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4" />
+                      <p className="text-white text-sm">Video is being processed...</p>
+                    </div>
+                  </div>
+                )}
+                <div className="absolute bottom-4 right-4 bg-black/70 text-white text-sm px-3 py-1 rounded">
+                  {latestClip.duration}s
                 </div>
-                <p className="text-white text-sm">Click to play video preview</p>
-              </div>
-              <div className="absolute bottom-4 right-4 bg-black/70 text-white text-sm px-3 py-1 rounded">
-                {latestClip.duration}s
-              </div>
-            </div>
-          </Card>
+              </Card>
 
           {/* Clip Details */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -185,10 +201,11 @@ export default function ClipPreview() {
               {/* Actions */}
               <Button
                 onClick={handleDownload}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3"
+                disabled={!latestClip.clipUrl}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download className="mr-2 w-4 h-4" />
-                Download Clip
+                {latestClip.clipUrl ? "Download Clip" : "Processing..."}
               </Button>
 
               <Button variant="outline" className="w-full">

@@ -86,3 +86,25 @@
 - Landing page is already built and should not be modified except for GitHub removal and name change
 - AI modules are simulated for MVP (can be replaced with real APIs later)
 - Video processing uses backend LLM for analysis
+
+
+## Video Clipping Implementation
+
+### Backend Video Processing
+- [ ] Install FFmpeg and fluent-ffmpeg
+- [ ] Create video clipping service
+- [ ] Implement subtitle generation (Pro-only)
+- [ ] Handle video download from YouTube
+- [ ] Process and clip video based on AI-detected timing
+- [ ] Upload clipped video to S3
+
+### Frontend Video Handling
+- [ ] Display video download progress
+- [ ] Show clipped video preview
+- [ ] Provide download link for clipped video
+- [ ] Handle Pro-only subtitle toggle
+
+### GitHub Integration
+- [ ] Setup git remote to Akskuy/clipper
+- [ ] Push complete application to GitHub
+- [ ] Create README with setup instructions

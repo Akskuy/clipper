@@ -3,6 +3,7 @@ import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { createUserTier, getDailyUsage, getUserClips, getUserTier, incrementDailyUsage, saveClip, upsertUserPreferences } from "../db";
 import { invokeLLM } from "../_core/llm";
 import { TRPCError } from "@trpc/server";
+import { processVideo } from "../_core/videoProcessor";
 
 const LITE_DAILY_LIMIT = 15;
 
@@ -315,6 +316,30 @@ export const clipperRouter = router({
       // Calculate viral score based on sentiment analysis
       const viralScore = Math.min(100, Math.floor(sentimentAnalysis.viralPotential * 1.2));
 
+      // Process video (clip, add subtitles if Pro, upload to S3)
+      let clipUrl: string | null = null;
+      let hasSubtitles = 0;
+
+      try {
+        const withSubtitles = userTier.tier === "pro";
+        const videoResult = await processVideo(
+          input.videoUrl,
+          startTime,
+          endTime,
+          viralTitle,
+          viralDescription,
+          userId,
+          Math.random() * 10000, // temporary ID
+          withSubtitles
+        );
+
+        clipUrl = videoResult.url;
+        hasSubtitles = withSubtitles ? 1 : 0;
+      } catch (error) {
+        console.error("[Clipper] Video processing error:", error);
+        // Continue without video URL - will be processed later
+      }
+
       // Save clip to database
       const clip = {
         userId,
@@ -325,17 +350,18 @@ export const clipperRouter = router({
         keywords: input.keywords,
         clipTitle: viralTitle,
         clipDescription: viralDescription,
+        clipUrl,
         startTime,
         endTime,
         duration,
-        hasSubtitles: 0,
+        hasSubtitles,
         viralScore,
         personaAnalysis: JSON.stringify(personaAnalysis),
         themeAnalysis: JSON.stringify(themeAnalysis),
         sentimentAnalysis: JSON.stringify(sentimentAnalysis),
       };
 
-      await saveClip(clip);
+      const clipResult = await saveClip(clip);
 
       return {
         success: true,
@@ -345,6 +371,7 @@ export const clipperRouter = router({
           themeAnalysis,
           sentimentAnalysis,
         },
+        message: clipUrl ? "Clip generated and uploaded successfully!" : "Clip generated. Video processing in progress...",
       };
     }),
 
